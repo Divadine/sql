@@ -1,0 +1,272 @@
+1.  SELECT book_ref, TO_CHAR(book_date, 'YYYY-MON-DD')
+AS formatted_date, total_amount
+FROM Bookings;
+
+
+2.  SELECT t.ticket_no,
+b.boarding_no, b.seat_no as seat_number, 
+t.passenger_id,  t.passenger_name
+FROM tickets t join boarding_passes 
+b on t.ticket_no=b.ticket_no;
+
+3.  SELECT seat_no, COUNT(*) AS seat_count
+FROM Seats
+GROUP BY seat_no
+ORDER BY seat_count ASC
+LIMIT 1;
+
+4.  SELECT 
+    TO_CHAR(book_date, 'Mon-YY') AS Month_name,
+    passenger_id,
+    passenger_name,
+    total_amount 
+from (
+    select book_date,
+        passenger_id,
+        passenger_name,
+        total_amount,
+        RANK() OVER (PARTITION BY EXTRACT(YEAR FROM book_date), EXTRACT(MONTH FROM book_date) ORDER BY total_amount DESC) AS payment_rank
+from bookings b 
+join tickets t 
+on b.book_ref = t.book_ref
+)ranked_payments
+WHERE payment_rank = 1
+
+
+5.
+   SELECT 
+    TO_CHAR(book_date, 'Mon-YY') AS Month_name,
+    passenger_id,
+    passenger_name,
+    total_amount 
+from (
+    select book_date,
+        passenger_id,
+        passenger_name,
+        total_amount,
+        RANK() OVER (PARTITION BY EXTRACT(YEAR FROM book_date), EXTRACT(MONTH FROM book_date) ORDER BY total_amount asc) AS payment_rank
+from bookings b 
+join tickets t 
+on b.book_ref = t.book_ref
+)ranked_payments
+WHERE payment_rank = 1
+
+
+
+
+6.
+SELECT t.passenger_id,t.passenger_name,t.ticket_no,
+count(f.flight_id) as flight_count
+FROM tickets t
+join ticket_flights tf on tf.ticket_no=t.ticket_no
+join flights f on f.flight_id=tf.flight_id
+group by 1,2,3
+having count(f.flight_id)>1;
+
+
+
+
+
+7.
+ SELECT COUNT(*) AS tickets_without_boarding_passes
+FROM tickets t
+LEFT JOIN boarding_passes b ON t.ticket_no = b.ticket_no
+WHERE b.ticket_no IS NULL;
+
+
+
+8.SELECT 
+    flight_no,
+    departure_airport,
+    arrival_airport,
+    aircraft_code,
+   (actual_arrival - actual_departure)  AS  duration
+FROM flights
+WHERE actual_arrival - actual_departure = (
+ SELECT MAX(actual_arrival - actual_departure)
+    FROM flights
+);
+
+
+
+
+
+
+9. SELECT 
+    flight_id,
+    flight_no,
+    scheduled_departure,
+    scheduled_arrival,
+    CONCAT(EXTRACT(HOUR FROM scheduled_departure), ':', EXTRACT(MINUTE FROM scheduled_departure)) AS departure_time,
+    CONCAT(EXTRACT(HOUR FROM scheduled_arrival), ':', EXTRACT(MINUTE FROM scheduled_arrival)) AS arrival_time
+FROM flights
+WHERE EXTRACT(HOUR FROM scheduled_departure) >= 6
+    AND EXTRACT(HOUR FROM scheduled_departure) < 12;
+
+
+
+
+
+10.  SELECT flight_id, flight_no, scheduled_departure, scheduled_arrival,departure_airport,
+    CASE 
+        WHEN extract (hour from scheduled_departure) >= 6 AND extract (hour from scheduled_departure) < 12
+        THEN 'Morning'
+        ELSE 'Not Morning'
+    END AS timings
+FROM FLIGHTS
+WHERE extract (hour from scheduled_departure) >= 6 AND extract (hour from scheduled_departure) < 12;
+
+
+
+
+
+
+11.   SELECT distinct Airport_code
+FROM Airports
+WHERE Timezone = 'Europe/Moscow';
+
+
+12. SELECT Aircraft_code, fare_conditions, COUNT(*) AS seat_count
+FROM Seats
+GROUP BY Aircraft_code, fare_conditions
+ORDER BY Aircraft_code, fare_conditions;
+
+
+13.  SELECT COUNT(DISTINCT Aircraft_code) AS count_aircraft_with_business_class
+FROM Seats
+WHERE fare_conditions = 'Business';
+
+14.  
+SELECT airport_name
+FROM (
+    SELECT airport_name, COUNT(*) AS departure_flights_count
+    FROM FLIGHTS
+    JOIN AIRPORTS ON FLIGHTS.departure_airport = AIRPORTS.airport_code
+    GROUP BY airport_name
+    ORDER BY departure_flights_count DESC
+    LIMIT 1
+) AS max_departures_airport;
+
+
+
+15.  SELECT airport_name
+FROM (
+    SELECT airport_name, COUNT(*) AS departure_flights_count
+    FROM FLIGHTS
+    JOIN AIRPORTS ON FLIGHTS.departure_airport = AIRPORTS.airport_code
+    GROUP BY airport_name
+    ORDER BY departure_flights_count ASC
+    LIMIT 1
+) AS min_departures_airport;
+
+
+
+
+16.  SELECT COUNT(*) AS Flight_Count
+FROM Flights
+WHERE departure_Airport = 'DME' AND Actual_departure IS NULL;
+
+
+17.   SELECT f.Flight_No as Flight_Number, f.aircraft_code, a.range as Ranges
+FROM Flights f
+JOIN Aircrafts a ON f.aircraft_code = a.aircraft_code
+WHERE f.Flight_id BETWEEN 3000 AND 6000;
+
+18.   SELECT COUNT(*) AS Flight_count
+FROM FLIGHTS
+WHERE (departure_airport = 'URS' AND arrival_airport = 'KUF') or 
+(departure_airport = 'KUF' AND arrival_airport = 'URS')
+
+
+19. SELECT COUNT(*) AS Flight_count
+FROM Flights
+WHERE Departure_airport IN ('NOZ', 'KRR');
+
+20.  SELECT Departure_airport, COUNT(*) AS Flight_Count
+FROM Flights
+WHERE Departure_airport IN ('KZN', 'DME', 'NBC', 'NJC', 'GDX', 'SGC', 'VKO', 'ROV')
+GROUP BY Departure_airport;
+
+21.  SELECT f.Flight_no, a.aircraft_code, a.range as Ranges, f.departure_airport
+FROM Flights F
+JOIN Aircrafts a ON f.aircraft_code = a.aircraft_code
+WHERE Flight_id BETWEEN 3000 AND 6000
+AND departure_airport = 'DME';
+
+22.
+SELECT f.flight_id, a.model AS aircraft_model
+FROM FLIGHTS f
+JOIN AIRCRAFTS a ON f.aircraft_code = a.aircraft_code
+WHERE a.model LIKE '%Airbus%' AND (f.status = 'Cancelled' OR f.status = 'Delayed');
+
+
+23.  SELECT f.flight_id, a.model AS aircraft_model
+FROM FLIGHTS f
+JOIN AIRCRAFTS a ON f.aircraft_code = a.aircraft_code
+WHERE a.model LIKE '%Boeing%' AND (f.status = 'Cancelled' OR f.status = 'Delayed');
+
+
+
+
+24.
+SELECT A.airport_name
+FROM (
+    SELECT arrival_airport, COUNT(*) AS cancelled_flights
+    FROM FLIGHTS
+    WHERE status = 'Cancelled'
+    GROUP BY arrival_airport
+    ORDER BY cancelled_flights DESC
+    LIMIT 1
+) AS C
+JOIN AIRPORTS A ON C.arrival_airport = A.airport_code;
+
+
+
+
+25.SELECT f.Flight_id, a.model as aircraft_model
+FROM Flights f
+JOIN Aircrafts a ON f.aircraft_code = a.aircraft_code
+WHERE a.model ilike '%Airbus%';
+
+
+26. SELECT Flight_id, flight_no, scheduled_departure, departure_airport
+FROM (
+    SELECT Flight_id, flight_no, scheduled_departure, departure_airport,
+        ROW_NUMBER() OVER(PARTITION BY departure_airport ORDER BY scheduled_departure DESC) as rn
+    FROM flights
+) AS ranked_flights
+WHERE rn = 1
+ORDER BY scheduled_departure DESC;
+
+
+27.  
+
+
+
+
+28.
+SELECT Flight_id, flight_no, scheduled_departure, departure_airport
+FROM (
+    SELECT Flight_id, flight_no, scheduled_departure, departure_airport,
+        ROW_NUMBER() OVER(PARTITION BY departure_airport ORDER BY scheduled_departure) AS rn
+    FROM FLIGHTS
+    WHERE status = 'Cancelled'
+) AS ranked_flights
+WHERE rn = 1;
+
+
+29.SELECT f.Flight_id
+FROM flights f
+JOIN aircrafts a ON f.aircraft_code = a.aircraft_code
+WHERE f.status = 'cancelled'
+AND a.model ilike '%Airbus%';
+
+
+30.
+SELECT f.Flight_id, a.range
+FROM flights f
+JOIN aircrafts a ON f.aircraft_code = a.aircraft_code
+WHERE a.range = (
+    SELECT MAX(range)
+    FROM aircrafts
+);
